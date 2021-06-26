@@ -1,109 +1,95 @@
 package com.devventure.colormyviews
 
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
+import android.provider.MediaStore
+import android.view.View
+import android.widget.ImageView
+import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.graphics.drawable.toDrawable
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.io.ByteArrayOutputStream
 
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var boxOne : TextView
-    lateinit var boxTwo : TextView
-    lateinit var boxThree : TextView
-    lateinit var boxfour : TextView
-    lateinit var boxfive : TextView
+    private lateinit var img: ImageView
+    //val linear = findViewById<View>(R.id.mainContainer)
+    private lateinit var linear: ConstraintLayout
+    lateinit var sharedPreferences: SharedPreferences
+    private val requestPermission = 1
 
-    var boxOneColor = 0
-    var boxTwoColor = 0
-    var boxThreeColor = 0
-    var boxFourColor = 0
-    var boxFiveColor = 0
+    var color = R.color.gray
+    val btn = findViewById<FloatingActionButton>(R.id.floatingActionButton)
+    var boxes = arrayOf(R.id.box_one_text,
+                        R.id.box_two_text,
+                        R.id.box_three_text,
+                        R.id.box_four_text,
+                        R.id.box_five_text)
 
-    val sharedPreferences : SharedPreferences
-        get() {
-            return this.getSharedPreferences("colors", Context.MODE_PRIVATE)
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
+        linear = findViewById(R.id.imageView)
 
-        boxOne  = findViewById<TextView>(R.id.box_one_text)
-        boxTwo = findViewById<TextView>(R.id.box_two_text)
-        boxThree= findViewById<TextView>(R.id.box_three_text)
-        boxfour = findViewById<TextView>(R.id.box_four_text)
-        boxfive = findViewById<TextView>(R.id.box_five_text)
+        sharedPreferences = getSharedPreferences("colors", Context.MODE_PRIVATE)
 
-        boxOneColor = sharedPreferences.getInt("boxOne", R.color.gray)
-        boxTwoColor = sharedPreferences.getInt("boxTwo", R.color.gray)
-        boxThreeColor = sharedPreferences.getInt("boxThree", R.color.gray)
-        boxFourColor = sharedPreferences.getInt("boxFour", R.color.gray)
-        boxFiveColor = sharedPreferences.getInt("boxFive", R.color.gray)
-
-        boxOne.setBackgroundResource(boxOneColor)
-        boxTwo.setBackgroundResource(boxTwoColor)
-        boxThree.setBackgroundResource(boxThreeColor)
-        boxfour.setBackgroundResource(boxFourColor)
-        boxfive.setBackgroundResource(boxFiveColor)
-
-        var changeColor = R.color.gray
-
-        var redBtn =    findViewById<Button>(R.id.red_bttn)
-        var yellowBtn = findViewById<Button>(R.id.yellow_bttn)
-        var greenBtn =  findViewById<Button>(R.id.green_bttn)
-
-        redBtn.setOnClickListener {
-            changeColor = R.color.red
+        for(tmp in boxes) {
+            findViewById<TextView>(tmp).setBackgroundColor(sharedPreferences.getInt("$tmp" ,R.color.gray))
         }
 
-        yellowBtn.setOnClickListener {
-            changeColor = R.color.yellow
+        btn.setOnClickListener {
+
+            var imgScreen = screenShot(linear)
+            img.setImageBitmap(imgScreen)
+
+            val intent = Intent(Intent.ACTION_SEND)
+            intent.type = "image/jpeg"
+            val path = MediaStore.Images.Media.insertImage(contentResolver, imgScreen, "ScreenShot", null)
+            val uri: Uri = Uri.parse(path)
+            intent.putExtra(Intent.EXTRA_STREAM, uri)
+
+            startActivity(Intent.createChooser(intent, "@String/shareMessage"))
         }
 
-        greenBtn.setOnClickListener {
-            changeColor = R.color.green
-        }
-
-        boxOne.setOnClickListener{
-            boxOne.setBackgroundResource(changeColor)
-            boxOneColor = changeColor
-        }
-        boxTwo.setOnClickListener{
-            boxTwo.setBackgroundResource(changeColor)
-            boxTwoColor = changeColor
-        }
-
-        boxThree.setOnClickListener{
-            boxThree.setBackgroundResource(changeColor)
-            boxThreeColor = changeColor
-        }
-        boxfour.setOnClickListener{
-            boxfour.setBackgroundResource(changeColor)
-            boxFourColor = changeColor
-        }
-
-        boxfive.setOnClickListener{
-            boxfive.setBackgroundResource(changeColor)
-            boxFiveColor = changeColor
-        }
     }
 
-    override fun onStop() {
-        super.onStop()
+        fun bttnClick(view: View) {
+            this.color = when(view.id) {
+                R.id.red_bttn -> R.color.red
+                R.id.green_bttn -> R.color.green
+                R.id.yellow_bttn -> R.color.yellow
+                else -> R.color.gray
+            }
+        }
 
-        val sharedPreferences = getSharedPreferences("colors", Context.MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
+        fun boxClick(view: View) {
+            view.setBackgroundColor(this.color)
+            var id = view.id
+            with (sharedPreferences.edit()) {
+                putInt("$id",color)
+                //commit()
+                apply()
+            }
+        }
 
-        editor.putInt("boxOne", boxOneColor)
-        editor.putInt("boxTwo", boxTwoColor)
-        editor.putInt("boxThree", boxThreeColor)
-        editor.putInt("boxFour", boxFourColor)
-        editor.putInt("boxFive", boxFiveColor)
-
-        //editor.commit()
-        editor.apply()
-    }
+        fun screenShot(view: View): Bitmap {
+            val bitmap = Bitmap.createBitmap(
+                view.width, view.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            view.draw(canvas)
+            return bitmap
+        }
 }
